@@ -1,7 +1,7 @@
 
 rm(list = ls())
 
-library(caret);  library(readr); library(mlbench); library(ggplot2);
+library(caret);  library(readr); 
 dataset <- read_csv("covtype.data", col_names = TRUE)
 
 
@@ -22,12 +22,15 @@ labels_training2 <- labels_training[ indices ]
 
 
 #train
-#ctrl <- trainControl(method = "repeatedcv", repeats = 2);
-#svmLinearmodel <- train(x=training2[,1:10],y=labels_training2, method = "svmLinear", tuneLength = 1, trControl = ctrl);
-#Usa sólo las
+#Usa sólo las 10 primeras variables
 svmLinearmodel <- train(x=training2[,1:10],y=labels_training2, method = "svmLinear", tuneLength = 2);
 #test local
 classesPredictionSVMLin <- predict(svmLinearmodel, newdata = testing[,1:10])
 confusionMatrix(data = classesPredictionSVMLin, labels_testing)
+
+
+
+#ctrl <- trainControl(method = "repeatedcv", repeats = 2);
+#svmLinearmodel <- train(x=training2[,1:10],y=labels_training2, method = "svmLinear", tuneLength = 1, trControl = ctrl);
 
 

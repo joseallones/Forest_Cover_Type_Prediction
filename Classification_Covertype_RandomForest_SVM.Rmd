@@ -1,0 +1,139 @@
+
+---
+title: "Cover Type Classification with Random Forest and SVMLinear"
+output:
+  html_document:
+    pandoc_args: [
+      "+RTS", "-K64m",
+      "-RTS"
+    ]
+---
+
+<br><br>
+
+__This code predicts forest categories using some cartographic variables.__
+
+The dataset was taken from the UCI Machine learning repository. More details [here](https://archive.ics.uci.edu/ml/datasets/Covertype). 
+
+This [link](https://archive.ics.uci.edu/ml/machine-learning-databases/covtype/covtype.data.gz) contains the full dataset. Download and unzip it in your project.
+
+<br>
+<h3> Function to clean data: </h3>
+
+
+```{r message=FALSE, warning=FALSE}
+
+library(caret)
+library(randomForest)
+
+
+cleanData <- function (d) {
+  
+  typecover=factor(d$Cover_Type)
+  d <- cbind( d[,1:54], typecover)
+  
+  soilvars <- paste0('Soil_Type', 1:40)
+  areavars <- paste0('Wilderness_Area', 1:4)
+  nonattributes <- c(soilvars, areavars, 'Id', 'Cover_Type')
+  
+  # Convert soil variables into a single factor variable
+  soils <- mapply(`*`, d[,soilvars], 1:40)
+  soil <- factor(Reduce(`+`, data.frame(soils)), levels=1:40)
+  
+  # Convert wilderness area variables into a single factor variable
+  areas <- mapply(`*`, d[,areavars], 1:4)
+  area <- factor(Reduce(`+`, data.frame(areas)), levels=1:4)
+  
+  #subset(d, select=-c(Id, Cover_Type, soilvars, areavars))
+  atts <- subset(d, select=setdiff(names(d), nonattributes))
+  atts
+  cbind(atts, soil=soil, area=area)
+}
+```
+
+<br>
+<h2> Random Forest </h2>
+<h3> Read and split data into a train and test set: </h3>
+
+
+```{r message=FALSE, warning=FALSE}
+
+set.seed(2); 
+raw_data <- read.csv('covtype.data')
+
+trainingdata <- cleanData(raw_data)
+
+
+inTrain <- createDataPartition(y = trainingdata[,11], p = .75,list = FALSE);
+
+training <- trainingdata[ inTrain,];
+testing <- trainingdata[-inTrain,];
+
+labels_training <- training[,11]
+training <- training[,-11]
+
+labels_testing <- as.factor(testing[,11])
+testing  <- testing[,-11]
+
+
+#Takes only 25000 instances for the training
+indices <- sample( 1:nrow( training ), 25000 )
+training2 <- training[ indices, ]
+labels_training2 <- labels_training[ indices ]
+
+```
+
+<br>
+<h3> Training: </h3>
+
+
+```{r warning=FALSE}
+model <- randomForest(x=training2,y=labels_training2)
+```
+
+<br>
+<h3> Evaluation: </h3>
+
+
+```{r warning=FALSE}
+classesPredictionModel <- predict(model, newdata = testing)
+#classesPredictionModel
+confusionMatrix(data = classesPredictionModel, labels_testing)
+```
+
+<br><br>
+<h2> SVM </h2>
+<h3> Split data into a train and test set: </h3>
+
+```{r warning=FALSE}
+svm_inTrain <- createDataPartition(y = raw_data[,55], p = .75,list = FALSE);
+svm_training <- raw_data[ inTrain,];
+svm_testing <- raw_data[-inTrain,];
+
+svm_labels_training <- as.factor(svm_training[,55])
+svm_training <- svm_training[,-55]
+
+svm_labels_testing <- as.factor(svm_testing[,55])
+svm_testing  <- svm_testing[,-55]
+
+#Muestrea 25000 instancias del entrenamiento
+svm_indices <- sample( 1:nrow( svm_training ), 25000 )
+svm_training2 <- svm_training[ svm_indices, ]
+svm_labels_training2 <- svm_labels_training[ svm_indices ]
+```
+
+<br>
+<h3> Training: </h3>
+```{r warning=FALSE,message=FALSE}
+svmLinearmodel <- train(x=svm_training2[,1:54],y=svm_labels_training2, method = "svmLinear", tuneLength = 3);
+```
+
+<br>
+<h3> Evaluation: </h3>
+```{r warning=FALSE}
+classesPredictionSVMLin <- predict(svmLinearmodel, newdata = svm_testing[,1:54])
+confusionMatrix(data = classesPredictionSVMLin, svm_labels_testing)
+```
+
+
+
